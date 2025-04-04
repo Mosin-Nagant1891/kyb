@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оптимизированный 3D-куб</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            touch-action: none; /* Оптимизация для touch-устройств */
+        }
+        #scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            will-change: transform; /* Оптимизация анимации */
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            will-change: transform; /* Оптимизация анимации */
+        }
+        .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="scene"></div>
+    <div id="info">Оптимизированный 3D-куб | FPS: <span id="fps">0</span></div>
+    <div class="loader" id="loader">Загрузка 3D-сцены...</div>
+
+    <!-- Three.js с CDN с SRI для безопасности -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js" 
+            integrity="sha384-7Mm0ZS9Fv4j/t9O5YgXJodWf7k7y4y2EpJv9jDgC5THGzUjY7Hv9P12vQ/5H5Vw" 
+            crossorigin="anonymous"></script>
+    
+    <script>
+        // Переменные для отслеживания производительности
+        let lastTime = 0;
+        let frameCount = 0;
+        let lastFpsUpdate = 0;
+        const fpsUpdateInterval = 500; // Обновлять FPS каждые 500мс
+
+        // Проверка поддержки WebGL
+        if (!WebGLRenderingContext) {
+            document.getElementById('loader').textContent = 
+                'Ваш браузер не поддерживает WebGL. Пожалуйста, обновите браузер.';
+            throw new Error('Browser does not support WebGL');
+        }
+
+        // Инициализация сцены, камеры и рендерера
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: "high-performance" // Оптимизация для производительности
+        });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio || 1); // Адаптация к плотности пикселей
+        renderer.setClearColor(0xeeeeee);
+        document.getElementById('scene').appendChild(renderer.domElement);
+
+        // Создание оптимизированного куба
+        const geometry = new THREE.BoxGeometry(2, 2, 2);
+        // Используем BufferGeometry для лучшей производительности
+        const bufferGeometry = new THREE.BufferGeometry().fromGeometry(geometry);
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0x00aaff,
+            metalness: 0.5,
+            roughness: 0.1
+        });
+        const cube = new THREE.Mesh(bufferGeometry, material);
+        scene.add(cube);
+
+        // Оптимизированное освещение
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+
+        // Позиционирование камеры
+        camera.position.z = 5;
+
+        // Обработка изменения размера окна с debounce
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }, 100);
+        });
+
+        // Удаление лоадера после загрузки
+        setTimeout(() => {
+            document.getElementById('loader').style.display = 'none';
+        }, 500);
+
+        // Функция для расчета FPS
+        function updateFps(time) {
+            frameCount++;
+            
+            if (time - lastFpsUpdate >= fpsUpdateInterval) {
+                const fps = Math.round((frameCount * 1000) / (time - lastFpsUpdate));
+                document.getElementById('fps').textContent = fps;
+                frameCount = 0;
+                lastFpsUpdate = time;
+            }
+            
+            lastTime = time;
+        }
+
+        // Оптимизированная анимация
+        function animate(time) {
+            requestAnimationFrame(animate);
+            
+            // Вращение куба с учетом времени для плавности
+            const delta = time - lastTime;
+            cube.rotation.x += 0.001 * delta;
+            cube.rotation.y += 0.001 * delta;
+            
+            renderer.render(scene, camera);
+            updateFps(time);
+        }
+        
+        animate(0);
+
+        // Обработка touch-событий для мобильных устройств
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!e.touches) return;
+            
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            
+            cube.rotation.y += (touchX - touchStartX) * 0.01;
+            cube.rotation.x += (touchY - touchStartY) * 0.01;
+            
+            touchStartX = touchX;
+            touchStartY = touchY;
+            
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
