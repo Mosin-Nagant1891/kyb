@@ -10,13 +10,13 @@
             overflow: hidden; 
             background-color: #f0f0f0;
             font-family: Arial, sans-serif;
-            touch-action: none; /* Оптимизация для touch-устройств */
+            touch-action: none;
         }
         #scene {
             position: absolute;
             width: 100%;
             height: 100%;
-            will-change: transform; /* Оптимизация анимации */
+            will-change: transform;
         }
         #info {
             position: absolute;
@@ -25,7 +25,7 @@
             background: rgba(255,255,255,0.7);
             padding: 10px;
             border-radius: 5px;
-            will-change: transform; /* Оптимизация анимации */
+            will-change: transform;
         }
         .loader {
             position: absolute;
@@ -41,17 +41,15 @@
     <div id="info">Вращайтесь | FPS: <span id="fps">0</span></div>
     <div class="loader" id="loader">Ожидайте, товарищ...</div>
 
-    <!-- Three.js с CDN с SRI для безопасности -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js" 
             integrity="sha384-7Mm0ZS9Fv4j/t9O5YgXJodWf7k7y4y2EpJv9jDgC5THGzUjY7Hv9P12vQ/5H5Vw" 
             crossorigin="anonymous"></script>
     
     <script>
         // Переменные для отслеживания производительности
-        let lastTime = 0;
         let frameCount = 0;
-        let lastFpsUpdate = 0;
-        const fpsUpdateInterval = 500; // Обновлять FPS каждые 500мс
+        let lastFpsUpdate = performance.now();
+        const fpsUpdateInterval = 500;
 
         // Проверка поддержки WebGL
         if (!WebGLRenderingContext) {
@@ -65,27 +63,25 @@
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ 
             antialias: true,
-            powerPreference: "high-performance" // Оптимизация для производительности
+            powerPreference: "high-performance"
         });
         
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio || 1); // Адаптация к плотности пикселей
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
         renderer.setClearColor(0xeeeeee);
         document.getElementById('scene').appendChild(renderer.domElement);
 
-        // Создание оптимизированного куба
+        // Создание куба
         const geometry = new THREE.BoxGeometry(2, 2, 2);
-        // Используем BufferGeometry для лучшей производительности
-        const bufferGeometry = new THREE.BufferGeometry().fromGeometry(geometry);
         const material = new THREE.MeshStandardMaterial({ 
             color: 0x00aaff,
             metalness: 0.5,
             roughness: 0.1
         });
-        const cube = new THREE.Mesh(bufferGeometry, material);
+        const cube = new THREE.Mesh(geometry, material);
         scene.add(cube);
 
-        // Оптимизированное освещение
+        // Освещение
         const ambientLight = new THREE.AmbientLight(0x404040);
         scene.add(ambientLight);
 
@@ -93,19 +89,14 @@
         directionalLight.position.set(1, 1, 1);
         scene.add(directionalLight);
 
-        // Позиционирование камеры
         camera.position.z = 5;
 
-        // Обработка изменения размера окна с debounce
-        let resizeTimeout;
+        // Обработка изменения размера окна
         window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }, 100);
-        });
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }, { passive: true });
 
         // Удаление лоадера после загрузки
         setTimeout(() => {
@@ -117,29 +108,30 @@
             frameCount++;
             
             if (time - lastFpsUpdate >= fpsUpdateInterval) {
-                const fps = Math.round((frameCount * 1000) / (time - lastFpsUpdate));
+                const fps = Math.round((frameCount * 1000) / (time - lastFpsUpdate);
                 document.getElementById('fps').textContent = fps;
                 frameCount = 0;
                 lastFpsUpdate = time;
             }
-            
-            lastTime = time;
         }
 
-        // Оптимизированная анимация
+        // Анимация
+        let lastTime = performance.now();
         function animate(time) {
             requestAnimationFrame(animate);
             
-            // Вращение куба с учетом времени для плавности
-            const delta = time - lastTime;
-            cube.rotation.x += 0.001 * delta;
-            cube.rotation.y += 0.001 * delta;
+            // Вычисляем дельту времени для плавной анимации
+            const delta = (time - lastTime) * 0.001; // преобразуем в секунды
+            lastTime = time;
+            
+            cube.rotation.x += 0.5 * delta;
+            cube.rotation.y += 0.5 * delta;
             
             renderer.render(scene, camera);
             updateFps(time);
         }
         
-        animate(0);
+        animate(performance.now());
 
         // Обработка touch-событий для мобильных устройств
         let touchStartX = 0;
